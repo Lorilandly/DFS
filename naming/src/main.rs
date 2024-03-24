@@ -1,4 +1,6 @@
-use axum::Router;
+mod routes;
+
+use std::future::IntoFuture;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,17 +17,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let registration_port = args[2]
         .parse::<u16>()
         .expect("Failed to parse registration port");
-    println!("{}, {}", service_port, registration_port);
 
-    let service_app = Router::new();
+    let service_app = routes::service_routes();
     let service_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", service_port)).await?;
-    axum::serve(service_listener, service_app).await?;
 
-    let registration_app = Router::new();
+    let registration_app = routes::registration_routes();
     let registration_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", registration_port)).await?;
-    axum::serve(registration_listener, registration_app).await?;
+
+    let _ = tokio::join!(
+        axum::serve(service_listener, service_app).into_future(),
+        axum::serve(registration_listener, registration_app).into_future(),
+    );
 
     Ok(())
 }
