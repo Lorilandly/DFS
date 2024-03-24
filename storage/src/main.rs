@@ -1,4 +1,5 @@
-use axum::Router;
+mod routes;
+
 use std::path::Path;
 
 #[tokio::main]
@@ -25,11 +26,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client_port, command_port, registration_port, root_storage_dir.display()
     );
 
-    let client_app = Router::new();
+    let client_app = routes::client_routes();
     let client_listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", client_port)).await?;
     axum::serve(client_listener, client_app).await?;
 
-    let command_app = Router::new();
+    let command_app = routes::command_routes();
     let command_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", command_port)).await?;
     axum::serve(command_listener, command_app).await?;
