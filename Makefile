@@ -4,7 +4,8 @@ PKGNAME = naming storage common
 GSONFILE = gson-2.8.6.jar
 
 # where are all the source files for main package and test code
-SRCFILES = $(foreach pkg,$(PKGNAME),$(pkg)/*.java)
+# SRCFILES = $(foreach pkg,$(PKGNAME),$(pkg)/*.java)
+SRCFILES = common/*.java
 TESTFILES = test/*.java test/util/*.java $(foreach pkg,$(PKGNAME),test/$(pkg)/*.java)
 
 # javadoc output directory and library url
@@ -29,10 +30,12 @@ checkpoint: build
 # delete all class files and docs, leaving only source
 clean:
 	rm -rf $(SRCFILES:.java=.class) $(TESTFILES:.java=.class) $(DOCDIR) $(DOCDIR)-test
+	cargo clean
 
 # generate documentation for the package of interest
 docs:
 	javadoc -cp .:$(GSONFILE) -private -link $(DOCLINK) -d $(DOCDIR) $(PKGNAME)
+	cargo doc --no-deps
 	
 # generate documentation for the test suite
 docs-test:
