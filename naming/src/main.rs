@@ -1,3 +1,4 @@
+mod dfs;
 mod handlers;
 mod logging;
 mod routes;
@@ -5,6 +6,7 @@ mod routes;
 use axum::middleware;
 use logging::print_request_response;
 use std::future::IntoFuture;
+use std::sync::{Arc, Mutex};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -31,12 +33,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse::<u16>()
         .expect("Failed to parse registration port");
 
-    let service_app = routes::service_routes().layer(middleware::from_fn(print_request_response));
+    let dfs = Arc::new(Mutex::new(dfs::Dfs {
+        storage: Default::default(),
+        fs: Default::default(),
+    }));
+
+    let service_app =
+        routes::service_routes(dfs.clone()).layer(middleware::from_fn(print_request_response));
     let service_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", service_port)).await?;
 
     let registration_app =
-        routes::registration_routes().layer(middleware::from_fn(print_request_response));
+        routes::registration_routes(dfs.clone()).layer(middleware::from_fn(print_request_response));
     let registration_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", registration_port)).await?;
 

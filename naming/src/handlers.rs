@@ -1,6 +1,7 @@
 pub(super) mod create_directory;
 pub(super) mod create_file;
 pub(super) mod delete;
+pub(super) mod exception_return;
 pub(super) mod get_storage;
 pub(super) mod is_directory;
 pub(super) mod is_valid_path;
