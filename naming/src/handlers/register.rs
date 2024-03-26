@@ -29,7 +29,7 @@ pub async fn register(
     }) {
         tracing::info!("Registered storage: {:?}", payload);
         axum::Json(RegisterResponse {
-            files: payload.files,
+            files: dfs.fs.insert_files(payload.files),
         })
         .into_response()
     } else {
