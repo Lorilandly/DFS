@@ -17,6 +17,7 @@ DOCLINK = https://docs.oracle.com/en/java/javase/21/docs/api
 
 # compile all source files
 build:
+	cargo b --release
 	javac -cp $(GSONFILE) $(TESTFILES) $(SRCFILES)
 	# TODO (if needed): add command to compile your naming and storage server
 

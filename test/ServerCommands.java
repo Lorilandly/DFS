@@ -43,7 +43,7 @@ public class ServerCommands {
      * above specification.
     */
     public static final String namingCommand = 
-        "cargo r -p naming 8080 8090";
+        "./target/release/naming 8080 8090";
 
     /**
      * Test code uses this String to start the first storage server
@@ -54,7 +54,7 @@ public class ServerCommands {
      * the above specification.
     */
     public static final String storage0Command = 
-        "cargo r -p storage 7000 7001 8090 /tmp/dist-systems-0";
+        "./target/release/storage 7000 7001 8090 /tmp/dist-systems-0";
 
     /**
      * Test code uses this String to start the second storage server
@@ -65,5 +65,5 @@ public class ServerCommands {
      * the above specification.
     */
     public static final String storage1Command = 
-        "cargo r -p storage 7010 7011 8090 /tmp/dist-systems-1";
+        "./target/release/storage 7010 7011 8090 /tmp/dist-systems-1";
 }
