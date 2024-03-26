@@ -1,4 +1,6 @@
-use axum::response::IntoResponse;
+use crate::dfs::Dfs;
+use axum::{extract::State, response::IntoResponse};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ListRequest {
@@ -10,12 +12,18 @@ pub struct ListResponse {
     success: bool,
 }
 
-pub async fn list(axum::Json(_payload): axum::Json<ListRequest>) -> impl IntoResponse {
+pub async fn list(
+    State(dfs): State<Arc<RwLock<Dfs>>>,
+    axum::Json(payload): axum::Json<ListRequest>,
+) -> impl IntoResponse {
     // create file to the storage server
-    let response = ListResponse {
-        files: vec![],
-        success: true,
-    };
-
-    axum::Json(response)
+    let dfs = dfs.read().unwrap();
+    match dfs.fs.list(&payload.path) {
+        Ok(files) => axum::Json(ListResponse {
+            files,
+            success: true,
+        })
+        .into_response(),
+        Err(e) => e.into_response(),
+    }
 }

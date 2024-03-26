@@ -1,10 +1,9 @@
-use crate::dfs::{Dfs, Storage};
+use crate::dfs::Dfs;
 use crate::handlers;
 use axum::routing::{post, Router};
-use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
-pub(super) fn service_routes(dfs: Arc<Mutex<Dfs>>) -> Router {
+pub(super) fn service_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
     Router::new()
         .route(
             "/is_valid_path",
@@ -24,7 +23,7 @@ pub(super) fn service_routes(dfs: Arc<Mutex<Dfs>>) -> Router {
         .with_state(dfs)
 }
 
-pub(super) fn registration_routes(dfs: Arc<Mutex<Dfs>>) -> Router {
+pub(super) fn registration_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
     Router::new()
         .route("/register", post(handlers::register::register))
         .with_state(dfs)

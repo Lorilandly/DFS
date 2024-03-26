@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use axum::{extract::State, response::IntoResponse};
 
@@ -18,10 +18,10 @@ pub struct RegisterResponse {
 }
 
 pub async fn register(
-    State(dfs): State<Arc<Mutex<Dfs>>>,
+    State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<RegisterRequest>,
 ) -> impl IntoResponse {
-    let mut dfs = dfs.lock().unwrap();
+    let mut dfs = dfs.write().unwrap();
     if dfs.storage.insert(Storage {
         storage_ip: payload.storage_ip.clone(),
         client_port: payload.client_port,
