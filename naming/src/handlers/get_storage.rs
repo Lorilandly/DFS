@@ -1,22 +1,32 @@
-use axum::response::IntoResponse;
+use crate::dfs::Dfs;
+use axum::{extract::State, response::IntoResponse};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct GetStorageRequest {
-    ip: String,
+    path: PathBuf,
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct GetStorageResponse {
-    message: String,
-    success: bool,
+    server_ip: String,
+    server_port: u16,
 }
 
-pub async fn get_storage(axum::Json(_payload): axum::Json<GetStorageRequest>) -> impl IntoResponse {
-    // TODO: Delete the file
-    let response = GetStorageResponse {
-        message: "Storage File".to_string(),
-        success: true,
-    };
-
-    axum::Json(response)
+pub async fn get_storage(
+    State(dfs): State<Arc<RwLock<Dfs>>>,
+    axum::Json(payload): axum::Json<GetStorageRequest>,
+) -> impl IntoResponse {
+    let dfs = dfs.read().unwrap();
+    match dfs.fs.get_storage(&payload.path) {
+        Ok(storage) => axum::Json(GetStorageResponse {
+            server_ip: storage.storage_ip.clone(),
+            server_port: storage.client_port,
+        })
+        .into_response(),
+        Err(e) => e.into_response(),
+    }
 }

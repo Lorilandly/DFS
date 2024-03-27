@@ -25,14 +25,15 @@ pub async fn register(
     axum::Json(payload): axum::Json<RegisterRequest>,
 ) -> impl IntoResponse {
     let mut dfs = dfs.write().unwrap();
-    if dfs.storage.insert(Storage {
+    let storage = Arc::new(Storage {
         storage_ip: payload.storage_ip.clone(),
         client_port: payload.client_port,
         command_port: payload.command_port,
-    }) {
+    });
+    if dfs.storage.insert(storage.clone()) {
         tracing::info!("Registered storage: {:?}", payload);
         axum::Json(RegisterResponse {
-            files: dfs.fs.insert_files(payload.files),
+            files: dfs.fs.insert_files(payload.files, storage.clone()),
         })
         .into_response()
     } else {
