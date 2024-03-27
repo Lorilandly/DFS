@@ -1,4 +1,7 @@
+use crate::handlers::exception_return::ExceptionReturn;
+use axum::response::IntoResponse;
 use std::fs;
+use std::os::unix::fs::FileExt;
 use std::path::Path;
 use std::path::PathBuf;
 pub struct Storage {
@@ -49,7 +52,6 @@ impl Storage {
             .send()?;
 
         let response = res.json::<RegisterResponse>()?;
-        println!("response: {:?}", response);
         for file in response.files {
             let path_to_delete = root_storage_dir.join(file.strip_prefix("/")?);
             println!("deleting: {:?}", path_to_delete);
@@ -86,5 +88,149 @@ impl Storage {
             }
         }
         Ok(files)
+    }
+
+    fn get_full_path(&self, path: &Path) -> Result<PathBuf, impl IntoResponse> {
+        match path.strip_prefix("/") {
+            Ok(p) => Ok(Path::new(&self.root_storage_dir).join(p)),
+            Err(_) => Err(axum::Json(ExceptionReturn::new(
+                "IllegalArgumentException",
+                "path must start with /",
+            ))
+            .into_response()),
+        }
+    }
+
+    pub fn get_file_size(&self, path: &Path) -> Result<u64, impl IntoResponse> {
+        match self.get_full_path(path) {
+            Ok(p) => match fs::metadata(&p) {
+                Ok(meta) => {
+                    if meta.is_dir() {
+                        Err(axum::Json(ExceptionReturn::new(
+                            "FileNotFoundException",
+                            "path must be a file",
+                        ))
+                        .into_response())
+                    } else {
+                        Ok(meta.len())
+                    }
+                }
+                Err(_) => Err(axum::Json(ExceptionReturn::new(
+                    "FileNotFoundException",
+                    "the parent directory does not exist.",
+                ))
+                .into_response()),
+            },
+            Err(e) => Err(e.into_response()),
+        }
+    }
+
+    pub fn find_file(&self, path: &Path) -> Result<fs::File, impl IntoResponse> {
+        match self.get_full_path(path) {
+            Ok(full_path) => match fs::metadata(&full_path) {
+                Ok(meta) => {
+                    if meta.is_dir() {
+                        Err(axum::Json(ExceptionReturn::new(
+                            "FileNotFoundException",
+                            "path must be a file",
+                        ))
+                        .into_response())
+                    } else {
+                        match fs::OpenOptions::new()
+                            .write(true)
+                            .read(true)
+                            .open(&full_path)
+                        {
+                            Ok(file) => Ok(file),
+                            Err(_) => Err(axum::Json(ExceptionReturn::new(
+                                "FileNotFoundException",
+                                "the file does not exist.",
+                            ))
+                            .into_response()),
+                        }
+                    }
+                }
+                Err(_) => Err(axum::Json(ExceptionReturn::new(
+                    "FileNotFoundException",
+                    "the file does not exist.",
+                ))
+                .into_response()),
+            },
+            Err(e) => Err(e.into_response()),
+        }
+    }
+
+    pub fn read(
+        &self,
+        path: &Path,
+        offset: u64,
+        length: u64,
+    ) -> Result<Vec<u8>, impl IntoResponse> {
+        match self.find_file(path) {
+            Ok(file) => {
+                let mut buffer = vec![0; length as usize];
+                match file.read_at(&mut buffer, offset) {
+                    Ok(read_size) => {
+                        if read_size < length as usize {
+                            Err(axum::Json(ExceptionReturn::new(
+                                "IndexOutOfBoundsException",
+                                "Read past end of file.",
+                            ))
+                            .into_response())
+                        } else {
+                            Ok(buffer)
+                        }
+                    }
+                    Err(_) => Err(axum::Json(ExceptionReturn::new(
+                        "FileNotFoundException",
+                        "error reading file",
+                    ))
+                    .into_response()),
+                }
+            }
+            Err(e) => Err(e.into_response()),
+        }
+    }
+
+    pub fn write(&self, path: &Path, offset: u64, data: Vec<u8>) -> Result<(), impl IntoResponse> {
+        match self.find_file(path) {
+            Ok(file) => match file.write_at(&data, offset) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    eprintln!("error writing file: {:?} {:?}", file, e);
+                    Err(axum::Json(ExceptionReturn::new(
+                        "FileNotFoundException",
+                        "error writing file",
+                    ))
+                    .into_response())
+                }
+            },
+            Err(e) => Err(e.into_response()),
+        }
+    }
+
+    pub fn create_file(&self, path: &Path) -> Result<bool, impl IntoResponse> {
+        if path == Path::new("/") {
+            return Err(axum::Json(ExceptionReturn::new(
+                "IllegalArgumentException",
+                "path cannot be empty.",
+            ))
+            .into_response());
+        }
+        match self.get_full_path(path) {
+            Ok(full_path) => match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&full_path)
+            {
+                Ok(_) => Ok(true),
+                Err(_) => Err(axum::Json(ExceptionReturn::new(
+                    "FileNotFoundException",
+                    "the file already exists.",
+                ))
+                .into_response()),
+            },
+            Err(e) => Err(e.into_response()),
+        }
     }
 }

@@ -1,10 +1,26 @@
 mod handlers;
+mod logging;
 mod routes;
 mod storage;
-use std::{future::IntoFuture, path::Path};
+use axum::middleware;
+use logging::print_request_response;
+use std::{
+    future::IntoFuture,
+    path::Path,
+    sync::{Arc, Mutex},
+};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "storage=debug,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 5 {
@@ -34,11 +50,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             root_storage_dir,
         )
         .await?;
+    let storage = Arc::new(Mutex::new(storage));
 
-    let client_app = routes::client_routes();
+    let client_app =
+        routes::client_routes(storage.clone()).layer(middleware::from_fn(print_request_response));
     let client_listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", client_port)).await?;
 
-    let command_app = routes::command_routes();
+    let command_app =
+        routes::command_routes(storage.clone()).layer(middleware::from_fn(print_request_response));
     let command_listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", command_port)).await?;
 
