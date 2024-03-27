@@ -1,9 +1,12 @@
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use crate::dfs::Dfs;
+use axum::{extract::State, response::IntoResponse};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CreateDirRequest {
-    path: String,
+    path: PathBuf,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -11,7 +14,13 @@ pub struct CreateDirResponse {
     success: bool,
 }
 
-pub async fn create_dir(axum::Json(_payload): axum::Json<CreateDirRequest>) -> impl IntoResponse {
-    let response = CreateDirResponse { success: true };
-    (StatusCode::OK, axum::Json(response))
+pub async fn create_dir(
+    State(dfs): State<Arc<RwLock<Dfs>>>,
+    axum::Json(payload): axum::Json<CreateDirRequest>,
+) -> impl IntoResponse {
+    let mut dfs = dfs.write().unwrap();
+    match dfs.fs.insert(&payload.path, true) {
+        Ok(res) => axum::Json(CreateDirResponse { success: res }).into_response(),
+        Err(e) => e.into_response(),
+    }
 }

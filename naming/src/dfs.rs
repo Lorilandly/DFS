@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Default)]
 pub struct Dfs {
     pub storage: HashSet<Storage>,
-    pub fs: FS,
+    pub fs: Fs,
 }
 
 #[derive(Debug, PartialEq, Eq, Default, Hash)]
@@ -17,11 +17,11 @@ pub struct Storage {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct FS {
+pub struct Fs {
     root: BTreeMap<PathBuf, FSNode>,
 }
 
-impl Default for FS {
+impl Default for Fs {
     fn default() -> Self {
         let mut root = BTreeMap::default();
         root.insert(
@@ -31,7 +31,7 @@ impl Default for FS {
                 children: vec![],
             },
         );
-        FS { root }
+        Fs { root }
     }
 }
 
@@ -41,18 +41,18 @@ struct FSNode {
     children: Vec<String>,
 }
 
-impl FS {
+impl Fs {
     pub fn insert_files(&mut self, files: Vec<PathBuf>) -> Vec<PathBuf> {
         let mut existed_files = vec![];
         for file in files {
-            if !self.insert(&file, false) {
+            if !self.insert_recursive(&file, false) {
                 existed_files.push(file);
             }
         }
         existed_files
     }
 
-    pub fn insert(&mut self, path: &Path, is_dir: bool) -> bool {
+    pub fn insert_recursive(&mut self, path: &Path, is_dir: bool) -> bool {
         if !self.is_valid_path(path) {
             false
         } else if let Some(_) = self.root.get(path) {
@@ -62,7 +62,7 @@ impl FS {
                 false
             }
         } else if let Some(parent) = path.parent() {
-            self.insert(parent.into(), true);
+            self.insert_recursive(parent.into(), true);
             if let Some(parent_node) = self.root.get_mut(parent) {
                 parent_node
                     .children
@@ -81,7 +81,7 @@ impl FS {
         }
     }
 
-    fn is_valid_path(&self, path: &Path) -> bool {
+    pub fn is_valid_path(&self, path: &Path) -> bool {
         path.is_absolute()
     }
 
@@ -121,17 +121,52 @@ impl FS {
             Err(e) => Err(e.into_response()),
         }
     }
+
+    pub fn insert(&mut self, path: &Path, is_dir: bool) -> Result<bool, impl IntoResponse> {
+        if let Some(_) = self.root.get(path) {
+            Ok(false)
+        } else if let Some(parent) = path.parent() {
+            match self.is_dir(parent) {
+                Ok(true) => {
+                    self.root.insert(
+                        path.to_str().unwrap().into(),
+                        FSNode {
+                            is_dir: is_dir,
+                            children: vec![],
+                        },
+                    );
+                    Ok(true)
+                }
+                Ok(false) => Err((
+                    axum::http::StatusCode::BAD_REQUEST,
+                    axum::Json(ExceptionReturn::new(
+                        "FileNotFoundException",
+                        "parent path is not a directory.",
+                    )),
+                )
+                    .into_response()),
+                Err(e) => Err(e.into_response()),
+            }
+        } else {
+            Err((
+                axum::http::StatusCode::BAD_REQUEST,
+                axum::Json(ExceptionReturn::new(
+                    "IllegalArgumentException",
+                    "path cannot be empty.",
+                )),
+            )
+                .into_response())
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::handlers::delete;
-
     use super::*;
 
     #[test]
     fn test_insert_files() {
-        let mut fs = FS::default();
+        let mut fs = Fs::default();
         let files = vec![PathBuf::from("/a"), PathBuf::from("/b")];
         assert_eq!(fs.insert_files(files), Vec::<PathBuf>::new());
         assert_eq!(fs.root.len(), 3);
@@ -145,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_valid_path() {
-        let fs = FS::default();
+        let fs = Fs::default();
         assert_eq!(fs.is_valid_path(Path::new("/")), true);
         assert_eq!(fs.is_valid_path(Path::new("a")), false);
         assert_eq!(fs.is_valid_path(Path::new("")), false);
