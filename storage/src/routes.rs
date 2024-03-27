@@ -1,3 +1,4 @@
+use crate::handlers;
 use axum::routing::{post, Router};
 
 pub(super) fn client_routes() -> Router {
