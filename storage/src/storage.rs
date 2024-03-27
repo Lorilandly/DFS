@@ -218,15 +218,67 @@ impl Storage {
             .into_response());
         }
         match self.get_full_path(path) {
-            Ok(full_path) => match fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&full_path)
-            {
-                Ok(_) => Ok(true),
-                Err(_) => Err(axum::Json(ExceptionReturn::new(
+            Ok(full_path) => match fs::create_dir_all(full_path.parent().unwrap()) {
+                Ok(_) => {
+                    match fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&full_path)
+                    {
+                        Ok(_) => Ok(true),
+                        Err(e) => Err(axum::Json(ExceptionReturn::new(
+                            "IllegalArgumentException",
+                            &e.to_string(),
+                        ))
+                        .into_response()),
+                    }
+                }
+                Err(e) => Err(axum::Json(ExceptionReturn::new(
+                    "IllegalArgumentException",
+                    &e.to_string(),
+                ))
+                .into_response()),
+            },
+
+            Err(e) => Err(e.into_response()),
+        }
+    }
+
+    pub fn delete_file(&self, path: &Path) -> Result<bool, impl IntoResponse> {
+        if path == Path::new("/") {
+            return Err(axum::Json(ExceptionReturn::new(
+                "IllegalArgumentException",
+                "path cannot be root.",
+            ))
+            .into_response());
+        }
+        match self.get_full_path(path) {
+            Ok(full_path) => match fs::metadata(&full_path) {
+                Ok(meta) => {
+                    if meta.is_dir() {
+                        // delete directory
+                        match fs::remove_dir_all(&full_path) {
+                            Ok(_) => Ok(true),
+                            Err(e) => Err(axum::Json(ExceptionReturn::new(
+                                "FileNotFoundException",
+                                &e.to_string(),
+                            ))
+                            .into_response()),
+                        }
+                    } else {
+                        match fs::remove_file(&full_path) {
+                            Ok(_) => Ok(true),
+                            Err(e) => Err(axum::Json(ExceptionReturn::new(
+                                "FileNotFoundException",
+                                &e.to_string(),
+                            ))
+                            .into_response()),
+                        }
+                    }
+                }
+                Err(e) => Err(axum::Json(ExceptionReturn::new(
                     "FileNotFoundException",
-                    "the file already exists.",
+                    &e.to_string(),
                 ))
                 .into_response()),
             },

@@ -16,8 +16,14 @@ pub(super) fn client_routes(storage: Arc<Mutex<Storage>>) -> Router {
 
 pub(super) fn command_routes(storage: Arc<Mutex<Storage>>) -> Router {
     Router::new()
-        .route("/storage_create", post(|| async { "Hello, World!" }))
-        .route("/storage_delete", post(|| async { "Hello, World!" }))
+        .route(
+            "/storage_create",
+            post(handlers::storage_create::storage_create),
+        )
+        .route(
+            "/storage_delete",
+            post(handlers::storage_delete::storage_delete),
+        )
         .route("/storage_copy", post(|| async { "Hello, World!" }))
         .with_state(storage)
 }
