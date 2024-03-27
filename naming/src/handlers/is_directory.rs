@@ -1,10 +1,11 @@
 use crate::dfs::Dfs;
 use axum::{extract::State, response::IntoResponse};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct IsDirRequest {
-    path: String,
+    path: PathBuf,
 }
 
 #[derive(Debug, serde::Serialize)]

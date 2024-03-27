@@ -1,10 +1,13 @@
 use crate::dfs::Dfs;
 use axum::{extract::State, response::IntoResponse};
-use std::sync::{Arc, RwLock};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ListRequest {
-    path: String,
+    path: PathBuf,
 }
 #[derive(Debug, serde::Serialize)]
 pub struct ListResponse {

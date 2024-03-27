@@ -42,10 +42,10 @@ struct FSNode {
 }
 
 impl FS {
-    pub fn insert_files(&mut self, files: Vec<String>) -> Vec<String> {
+    pub fn insert_files(&mut self, files: Vec<PathBuf>) -> Vec<PathBuf> {
         let mut existed_files = vec![];
         for file in files {
-            if !self.insert(Path::new(&file), false) {
+            if !self.insert(&file, false) {
                 existed_files.push(file);
             }
         }
@@ -53,7 +53,9 @@ impl FS {
     }
 
     pub fn insert(&mut self, path: &Path, is_dir: bool) -> bool {
-        if let Some(_) = self.root.get(path) {
+        if !self.is_valid_path(path) {
+            false
+        } else if let Some(_) = self.root.get(path) {
             if path == Path::new("/") {
                 true
             } else {
@@ -79,14 +81,12 @@ impl FS {
         }
     }
 
-    pub fn is_valid_path(&self, path: &str) -> bool {
-        path.starts_with("/")
+    fn is_valid_path(&self, path: &Path) -> bool {
+        path.is_absolute()
     }
 
-    pub fn is_dir(&self, file: &str) -> Result<bool, impl IntoResponse> {
-        let path = Path::new(file);
-        println!("path: {:?}", path.to_str().unwrap());
-        if !self.is_valid_path(file) {
+    pub fn is_dir(&self, path: &Path) -> Result<bool, impl IntoResponse> {
+        if !self.is_valid_path(path) {
             Err((
                 axum::http::StatusCode::BAD_REQUEST,
                 axum::Json(ExceptionReturn::new(
@@ -107,9 +107,8 @@ impl FS {
         }
     }
 
-    pub fn list(&self, file: &str) -> Result<Vec<String>, impl IntoResponse> {
-        let path = Path::new(file);
-        match self.is_dir(file) {
+    pub fn list(&self, path: &Path) -> Result<Vec<String>, impl IntoResponse> {
+        match self.is_dir(path) {
             Ok(true) => Ok(self.root.get(path).unwrap().children.clone()),
             Ok(false) => Err((
                 axum::http::StatusCode::BAD_REQUEST,
@@ -126,13 +125,29 @@ impl FS {
 
 #[cfg(test)]
 mod tests {
+    use crate::handlers::delete;
+
     use super::*;
+
+    #[test]
+    fn test_insert_files() {
+        let mut fs = FS::default();
+        let files = vec![PathBuf::from("/a"), PathBuf::from("/b")];
+        assert_eq!(fs.insert_files(files), Vec::<PathBuf>::new());
+        assert_eq!(fs.root.len(), 3);
+        assert_eq!(fs.root.contains_key(Path::new("/")), true);
+        assert_eq!(fs.root.contains_key(Path::new("/a")), true);
+        assert_eq!(fs.root.contains_key(Path::new("/b")), true);
+        let files2 = vec![PathBuf::from("a/b/c"), PathBuf::from("/a/c")];
+        let delete = vec![PathBuf::from("a/b/c")];
+        assert_eq!(fs.insert_files(files2), delete);
+    }
 
     #[test]
     fn test_valid_path() {
         let fs = FS::default();
-        assert_eq!(fs.is_valid_path("/"), true);
-        assert_eq!(fs.is_valid_path("a"), false);
-        assert_eq!(fs.is_valid_path(""), false);
+        assert_eq!(fs.is_valid_path(Path::new("/")), true);
+        assert_eq!(fs.is_valid_path(Path::new("a")), false);
+        assert_eq!(fs.is_valid_path(Path::new("")), false);
     }
 }

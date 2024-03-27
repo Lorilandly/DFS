@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use axum::{extract::State, response::IntoResponse};
 
@@ -9,12 +12,12 @@ pub struct RegisterRequest {
     storage_ip: String,
     client_port: u16,
     command_port: u16,
-    files: Vec<String>,
+    files: Vec<PathBuf>,
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct RegisterResponse {
-    files: Vec<String>,
+    files: Vec<PathBuf>,
 }
 
 pub async fn register(
