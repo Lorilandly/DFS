@@ -21,7 +21,7 @@ pub async fn get_storage(
     axum::Json(payload): axum::Json<GetStorageRequest>,
 ) -> impl IntoResponse {
     let dfs = dfs.read().unwrap();
-    match dfs.fs.get_storage(&payload.path) {
+    match dfs.get_storage(&payload.path) {
         Ok(storage) => axum::Json(GetStorageResponse {
             server_ip: storage.storage_ip.clone(),
             server_port: storage.client_port,

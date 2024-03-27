@@ -19,7 +19,7 @@ pub async fn create_dir(
     axum::Json(payload): axum::Json<CreateDirRequest>,
 ) -> impl IntoResponse {
     let mut dfs = dfs.write().unwrap();
-    match dfs.fs.insert(&payload.path, true) {
+    match dfs.insert(&payload.path, true) {
         Ok(res) => axum::Json(CreateDirResponse { success: res }).into_response(),
         Err(e) => e.into_response(),
     }

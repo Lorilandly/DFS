@@ -20,7 +20,7 @@ pub async fn create_file(
 ) -> impl IntoResponse {
     let mut dfs = dfs.write().unwrap();
 
-    match dfs.fs.insert(&payload.path, false) {
+    match dfs.insert(&payload.path, false) {
         Ok(res) => axum::Json(CreateFileResponse { success: res }).into_response(),
         Err(e) => e.into_response(),
     }

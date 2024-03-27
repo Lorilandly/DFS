@@ -18,7 +18,7 @@ pub async fn is_directory(
     axum::Json(payload): axum::Json<IsDirRequest>,
 ) -> impl IntoResponse {
     let dfs = dfs.read().unwrap();
-    match dfs.fs.is_dir(&payload.path) {
+    match dfs.is_dir(&payload.path) {
         Ok(res) => axum::Json(IsDirResponse { success: res }).into_response(),
         Err(e) => e.into_response(),
     }

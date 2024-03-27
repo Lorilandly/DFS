@@ -21,7 +21,7 @@ pub async fn list(
 ) -> impl IntoResponse {
     // create file to the storage server
     let dfs = dfs.read().unwrap();
-    match dfs.fs.list(&payload.path) {
+    match dfs.list(&payload.path) {
         Ok(files) => axum::Json(ListResponse {
             files,
             success: true,
