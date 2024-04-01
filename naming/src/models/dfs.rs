@@ -1,8 +1,11 @@
-use crate::handlers::exception_return::ExceptionReturn;
+use super::{fs_node::FsNode, storage::Storage};
+use crate::exception_return::ExceptionReturn;
 use axum::response::IntoResponse;
-use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[derive(Debug)]
 pub struct Dfs {
@@ -10,36 +13,15 @@ pub struct Dfs {
     fs: BTreeMap<PathBuf, FsNode>,
 }
 
-#[derive(Debug, Default, Hash, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Storage {
-    pub storage_ip: String,
-    pub client_port: u16,
-    pub command_port: u16,
-}
-
 impl Default for Dfs {
     fn default() -> Self {
         let mut root = BTreeMap::default();
-        root.insert(
-            "/".into(),
-            FsNode {
-                is_dir: true,
-                children: vec![],
-                storage: Arc::default(),
-            },
-        );
+        root.insert("/".into(), FsNode::new(true, Arc::default()));
         Dfs {
             storage: BTreeSet::default(),
             fs: root,
         }
     }
-}
-
-#[derive(Debug, PartialEq, Eq, Default, Hash)]
-struct FsNode {
-    is_dir: bool,
-    children: Vec<String>,
-    storage: Arc<Storage>,
 }
 
 impl Dfs {
@@ -51,11 +33,10 @@ impl Dfs {
                 Ok(true) => {
                     self.fs.insert(
                         path.to_str().unwrap().into(),
-                        FsNode {
-                            is_dir: is_dir,
-                            children: vec![],
-                            storage: Arc::default(),
-                        },
+                        FsNode::new(is_dir, Arc::default()),
+                    );
+                    self.fs.get_mut(parent).unwrap().children.push(
+                        path.file_name().unwrap().to_str().unwrap().to_string(),
                     );
                     if let Ok(false) = self.is_dir(path) {
                         let client = reqwest::blocking::Client::new();

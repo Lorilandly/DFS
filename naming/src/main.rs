@@ -1,6 +1,6 @@
-mod dfs;
-mod handlers;
+mod exception_return;
 mod logging;
+mod models;
 mod routes;
 
 use axum::middleware;
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse::<u16>()
         .expect("Failed to parse registration port");
 
-    let dfs = Arc::new(RwLock::new(dfs::Dfs::default()));
+    let dfs = Arc::new(RwLock::new(models::dfs::Dfs::default()));
 
     let service_app =
         routes::service_routes(dfs.clone()).layer(middleware::from_fn(print_request_response));

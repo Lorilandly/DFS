@@ -5,7 +5,10 @@ use std::{
 
 use axum::{extract::State, response::IntoResponse};
 
-use crate::dfs::{Dfs, Storage};
+use crate::{
+    exception_return::ExceptionReturn,
+    models::{dfs::Dfs, storage::Storage},
+};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct RegisterRequest {
@@ -40,7 +43,7 @@ pub async fn register(
         tracing::warn!("Storage already registered: {:?}", payload);
         (
             axum::http::StatusCode::CONFLICT,
-            axum::Json(super::exception_return::ExceptionReturn::new(
+            axum::Json(ExceptionReturn::new(
                 "IllegalStateException",
                 "This storage server is already registered.",
             )),
