@@ -1,14 +1,10 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
-
-use axum::{extract::State, response::IntoResponse};
-
 use crate::{
     exception_return::ExceptionReturn,
     models::{dfs::Dfs, storage::Storage},
 };
+use axum::{extract::State, response::IntoResponse};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct RegisterRequest {
@@ -27,7 +23,7 @@ pub async fn register(
     State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<RegisterRequest>,
 ) -> impl IntoResponse {
-    let mut dfs = dfs.write().unwrap();
+    let mut dfs = dfs.write().await;
     let storage = Arc::new(Storage {
         storage_ip: payload.storage_ip.clone(),
         client_port: payload.client_port,

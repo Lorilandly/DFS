@@ -1,9 +1,7 @@
 use crate::models::dfs::Dfs;
 use axum::{extract::State, response::IntoResponse};
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ListRequest {
@@ -20,7 +18,7 @@ pub async fn list(
     axum::Json(payload): axum::Json<ListRequest>,
 ) -> impl IntoResponse {
     // create file to the storage server
-    let dfs = dfs.read().unwrap();
+    let dfs = dfs.read().await;
     match dfs.list(&payload.path) {
         Ok(files) => axum::Json(ListResponse {
             files,

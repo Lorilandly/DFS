@@ -2,7 +2,7 @@ use crate::models::dfs::Dfs;
 use axum::{extract::State, response::IntoResponse};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CreateFileRequest {
@@ -18,7 +18,7 @@ pub async fn create_file(
     State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<CreateFileRequest>,
 ) -> impl IntoResponse {
-    let mut dfs = dfs.write().unwrap();
+    let mut dfs = dfs.write().await;
 
     match dfs.insert(&payload.path, false) {
         Ok(res) => axum::Json(CreateFileResponse { success: res }).into_response(),

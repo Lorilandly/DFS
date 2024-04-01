@@ -1,9 +1,7 @@
 use crate::models::dfs::Dfs;
 use axum::{extract::State, response::IntoResponse};
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct GetStorageRequest {
@@ -20,7 +18,7 @@ pub async fn get_storage(
     State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<GetStorageRequest>,
 ) -> impl IntoResponse {
-    let dfs = dfs.read().unwrap();
+    let dfs = dfs.read().await;
     match dfs.get_storage(&payload.path) {
         Ok(storage) => axum::Json(GetStorageResponse {
             server_ip: storage.storage_ip.clone(),

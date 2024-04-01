@@ -35,9 +35,11 @@ impl Dfs {
                         path.to_str().unwrap().into(),
                         FsNode::new(is_dir, Arc::default()),
                     );
-                    self.fs.get_mut(parent).unwrap().children.push(
-                        path.file_name().unwrap().to_str().unwrap().to_string(),
-                    );
+                    self.fs
+                        .get_mut(parent)
+                        .unwrap()
+                        .children
+                        .push(path.file_name().unwrap().to_str().unwrap().to_string());
                     if let Ok(false) = self.is_dir(path) {
                         let client = reqwest::blocking::Client::new();
                         let command_port = self.storage.first().unwrap().command_port;

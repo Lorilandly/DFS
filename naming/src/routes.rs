@@ -11,7 +11,8 @@ mod unlock;
 
 use crate::models::dfs::Dfs;
 use axum::routing::{post, Router};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub(super) fn service_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
     Router::new()
