@@ -1,6 +1,6 @@
 use super::storage::Storage;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use parking_lot::RwLock;
 
 #[derive(Debug, Default)]
 pub struct FsNode {

@@ -1,5 +1,11 @@
-use axum::response::IntoResponse;
-use std::path::PathBuf;
+use crate::models::dfs::Dfs;
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Result},
+};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct LockRequest {
@@ -7,7 +13,12 @@ pub struct LockRequest {
     exclusive: bool,
 }
 
-pub async fn lock(axum::Json(_payload): axum::Json<LockRequest>) -> impl IntoResponse {
+pub async fn lock(
+    State(dfs): State<Arc<RwLock<Dfs>>>,
+    axum::Json(payload): axum::Json<LockRequest>,
+) -> Result<impl IntoResponse> {
     // create file to the storage server
-    axum::http::StatusCode::OK
+    let dfs = dfs.read().await;
+    dfs.lock(&payload.path, payload.exclusive).await?;
+    Ok(StatusCode::OK)
 }

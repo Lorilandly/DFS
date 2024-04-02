@@ -13,3 +13,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 http-body-util = "0.1.0"
 reqwest = { version = "0.12", default-features = false, features = ["blocking"]}
+parking_lot = "0.12"
