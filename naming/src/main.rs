@@ -5,8 +5,7 @@ mod routes;
 
 use axum::middleware;
 use logging::print_request_response;
-use std::future::IntoFuture;
-use std::sync::Arc;
+use std::{future::IntoFuture, sync::Arc};
 use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

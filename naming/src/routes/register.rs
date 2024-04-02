@@ -15,7 +15,7 @@ pub struct RegisterRequest {
 }
 
 #[derive(Debug, serde::Serialize)]
-pub struct RegisterResponse {
+struct RegisterResponse {
     files: Vec<PathBuf>,
 }
 
@@ -32,7 +32,7 @@ pub async fn register(
     if dfs.storage.insert(storage.clone()) {
         tracing::info!("Registered storage: {:?}", payload);
         axum::Json(RegisterResponse {
-            files: dfs.insert_files(payload.files, storage.clone()),
+            files: dfs.insert_files(payload.files, storage.clone()).await,
         })
         .into_response()
     } else {

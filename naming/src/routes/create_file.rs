@@ -1,5 +1,8 @@
 use crate::models::dfs::Dfs;
-use axum::{extract::State, response::IntoResponse};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Result},
+};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -10,18 +13,16 @@ pub struct CreateFileRequest {
 }
 
 #[derive(Debug, serde::Serialize)]
-pub struct CreateFileResponse {
+struct CreateFileResponse {
     success: bool,
 }
 
 pub async fn create_file(
     State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<CreateFileRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse> {
     let mut dfs = dfs.write().await;
 
-    match dfs.insert(&payload.path, false) {
-        Ok(res) => axum::Json(CreateFileResponse { success: res }).into_response(),
-        Err(e) => e.into_response(),
-    }
+    let success = dfs.insert(&payload.path, false).await?;
+    Ok(axum::Json(CreateFileResponse { success }))
 }

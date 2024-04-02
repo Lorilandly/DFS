@@ -1,7 +1,6 @@
 use crate::models::dfs::Dfs;
-use axum::{extract::State, response::IntoResponse};
-use std::{path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
+use axum::response::IntoResponse;
+use std::path::PathBuf;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct IsValidPathRequest {
@@ -9,17 +8,14 @@ pub struct IsValidPathRequest {
 }
 
 #[derive(Debug, serde::Serialize)]
-pub struct IsValidPathResponse {
+struct IsValidPathResponse {
     success: bool,
 }
 
 pub async fn is_valid_path(
-    State(dfs): State<Arc<RwLock<Dfs>>>,
     axum::Json(payload): axum::Json<IsValidPathRequest>,
 ) -> impl IntoResponse {
-    let dfs = dfs.write().await;
-    match dfs.is_dir(&payload.path) {
-        Ok(res) => axum::Json(IsValidPathResponse { success: res }),
-        Err(_) => axum::Json(IsValidPathResponse { success: false }),
-    }
+    axum::Json(IsValidPathResponse {
+        success: Dfs::is_valid_path(&payload.path),
+    })
 }
