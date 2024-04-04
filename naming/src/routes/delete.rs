@@ -1,22 +1,28 @@
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use crate::models::dfs::Dfs;
+use axum::{
+    extract::State,
+    response::{IntoResponse, Result},
+    Json,
+};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct DeleteRequest {
-    path: String,
+    path: PathBuf,
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct DeleteResponse {
-    status: String,
+    success: bool,
 }
 
-pub async fn delete(axum::Json(payload): axum::Json<DeleteRequest>) -> impl IntoResponse {
-    let path = payload.path;
-
-    // TODO: Delete the file
-
-    let status = format!("Deleted {}", path);
-    let resposne = DeleteResponse { status };
-    (StatusCode::OK, axum::Json(resposne))
+pub async fn delete(
+    State(dfs): State<Arc<RwLock<Dfs>>>,
+    axum::Json(payload): axum::Json<DeleteRequest>,
+) -> Result<impl IntoResponse> {
+    // Delete the file
+    let mut dfs = dfs.write().await;
+    let success = dfs.delete(&payload.path).await?;
+    Ok(Json(DeleteResponse { success }))
 }

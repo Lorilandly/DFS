@@ -3,7 +3,7 @@ use crate::requests;
 use futures::future::join_all;
 use parking_lot::RwLock;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeSet, HashSet},
     path::Path,
     sync::{atomic::AtomicI32, Arc},
 };
@@ -12,17 +12,15 @@ use tokio::sync::Mutex;
 #[derive(Debug, Default)]
 pub struct FsNode {
     pub is_dir: bool,
-    pub children: RwLock<Vec<String>>,
+    pub children: RwLock<HashSet<String>>,
     storages: Mutex<BTreeSet<Arc<Storage>>>,
     pub access_count: AtomicI32,
 }
 
 impl FsNode {
     /// Creates a new FsNode object
-    pub fn new(is_dir: bool, child: Vec<String>, storage: Arc<Storage>) -> Self {
-        let mut storages = BTreeSet::new();
-        storages.insert(storage);
-        let storages = Mutex::new(storages);
+    pub fn new(is_dir: bool, child: HashSet<String>, storage: Arc<Storage>) -> Self {
+        let storages = Mutex::new(BTreeSet::from([storage]));
         Self {
             is_dir,
             children: RwLock::new(child),
@@ -32,6 +30,12 @@ impl FsNode {
     }
 
     /// Add a new storage to the node
+    pub async fn add_storage(&self, storage: Arc<Storage>) {
+        let mut storages = self.storages.lock().await;
+        storages.insert(storage);
+    }
+
+    /// Replicate to a new storage for the node
     ///
     /// This function compare the given storages with the current storages, if there
     /// are any storage in the given storages that are not in the current storages,
@@ -98,7 +102,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_storage() {
-        let fs_node = FsNode::new(true, vec![], Arc::new(Storage::default()));
+        let fs_node = FsNode::new(true, HashSet::new(), Arc::new(Storage::default()));
         // fs_node.storages.lock().await.insert(Arc::new(Storage::default()));
         assert!(fs_node.get_storage().await.is_some());
     }

@@ -3,7 +3,7 @@ use crate::exception_return::ExceptionReturn;
 use axum::{http::StatusCode, Json};
 use parking_lot::lock_api::RawRwLock;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashSet, VecDeque},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -19,7 +19,10 @@ pub struct Dfs {
 impl Default for Dfs {
     fn default() -> Self {
         let mut root = BTreeMap::default();
-        root.insert("/".into(), FsNode::new(true, vec![], Arc::default()));
+        root.insert(
+            "/".into(),
+            FsNode::new(true, HashSet::new(), Arc::default()),
+        );
         Dfs {
             storage: BTreeSet::default(),
             fs: root,
@@ -57,14 +60,16 @@ impl Dfs {
             match self.is_dir(parent)? {
                 true => {
                     let storage = self.random_storage()?;
-                    self.fs
-                        .insert(path.into(), FsNode::new(is_dir, vec![], storage.clone()));
+                    self.fs.insert(
+                        path.into(),
+                        FsNode::new(is_dir, HashSet::new(), storage.clone()),
+                    );
                     self.fs
                         .get(parent)
                         .unwrap()
                         .children
                         .write()
-                        .push(path.file_name().unwrap().to_str().unwrap().to_string());
+                        .insert(path.file_name().unwrap().to_str().unwrap().to_string());
                     if !is_dir {
                         let _ = crate::requests::storage_create(&storage, path).await;
                     }
@@ -89,17 +94,21 @@ impl Dfs {
         }
     }
 
-    pub fn insert_files(&mut self, files: Vec<PathBuf>, storage: Arc<Storage>) -> Vec<PathBuf> {
+    pub async fn insert_files(
+        &mut self,
+        files: Vec<PathBuf>,
+        storage: Arc<Storage>,
+    ) -> Vec<PathBuf> {
         let mut existed_files = vec![];
         for file in files {
-            if !self.insert_recursive(&file, false, storage.clone()) {
+            if !self.insert_recursive(&file, false, storage.clone()).await {
                 existed_files.push(file);
             }
         }
         existed_files
     }
 
-    fn insert_recursive(&mut self, path: &Path, is_dir: bool, storage: Arc<Storage>) -> bool {
+    async fn insert_recursive(&mut self, path: &Path, is_dir: bool, storage: Arc<Storage>) -> bool {
         if !Self::is_valid_path(path) {
             false
         } else if let Some(_) = self.fs.get(path) {
@@ -112,18 +121,19 @@ impl Dfs {
             let mut chld = path;
             self.fs.insert(
                 chld.to_str().unwrap().into(),
-                FsNode::new(is_dir, vec![], storage.clone()),
+                FsNode::new(is_dir, HashSet::new(), storage.clone()),
             );
             while let Some(parent) = chld.parent() {
                 let file_name = chld.file_name().unwrap().to_str().unwrap().to_string();
                 if let Some(parent_node) = self.fs.get(parent) {
-                    parent_node.children.write().push(file_name.clone());
-                    break;
+                    parent_node.children.write().insert(file_name.clone());
+                    parent_node.add_storage(storage.clone()).await;
+                } else {
+                    self.fs.insert(
+                        parent.to_str().unwrap().into(),
+                        FsNode::new(true, HashSet::from([file_name]), storage.clone()),
+                    );
                 }
-                self.fs.insert(
-                    parent.to_str().unwrap().into(),
-                    FsNode::new(true, vec![file_name], storage.clone()),
-                );
                 chld = parent;
             }
             true
@@ -162,7 +172,15 @@ impl Dfs {
 
     pub fn list(&self, path: &Path) -> Result<Vec<String>> {
         match self.is_dir(path)? {
-            true => Ok(self.fs.get(path).unwrap().children.read().clone()),
+            true => Ok(self
+                .fs
+                .get(path)
+                .unwrap()
+                .children
+                .read()
+                .clone()
+                .into_iter()
+                .collect()),
             false => Err((
                 StatusCode::BAD_REQUEST,
                 axum::Json(ExceptionReturn::new(
@@ -186,10 +204,33 @@ impl Dfs {
         }
     }
 
+    pub async fn delete(&mut self, path: &Path) -> Result<bool> {
+        self.is_dir(path)?;
+        // del parent children
+        // add self to del queue
+        // loop del queue:
+        //  add self children to del queue
+        //  del self
+        self.fs
+            .get(path.parent().unwrap())
+            .unwrap()
+            .children
+            .write()
+            .remove(path.file_name().unwrap().to_str().unwrap());
+        let mut queue = VecDeque::from([path.to_path_buf()]);
+        self.fs.get(path).unwrap().remove_storage(&path).await;
+        while let Some(path) = queue.pop_front() {
+            let node = self.fs.remove(&path).unwrap();
+            node.children.write().iter().for_each(|child| {
+                queue.push_back(path.join(child));
+            });
+        }
+        Ok(true)
+    }
+
     pub async fn lock(&self, path: &Path, exclusive: bool) -> Result<()> {
         self.is_dir(path)?;
         if let Some(node) = self.fs.get(path) {
-            tracing::info!("lock path: {:?}", path);
             let files_to_lock = Self::get_ancestors(path);
             // if lock for many times, replicate
             let count = node
@@ -215,7 +256,6 @@ impl Dfs {
                     }
                 });
             });
-            tracing::info!("lock path: {:?} success", path);
         }
         Ok(())
     }
@@ -226,13 +266,9 @@ impl Dfs {
             // try unlocking the file node
             // check if the file node is locked
             if exclusive && node.children.is_locked_exclusive() {
-                tracing::info!("unlock path: {:?}", path);
                 unsafe { node.children.raw().unlock_exclusive() };
-                tracing::info!("unlock path: {:?} success", path);
             } else if node.children.is_locked() {
-                tracing::info!("unlock path: {:?}", path);
                 unsafe { node.children.raw().unlock_shared() };
-                tracing::info!("unlock path: {:?} success", path);
             } else {
                 return Err((
                     StatusCode::BAD_REQUEST,
@@ -265,12 +301,12 @@ impl Dfs {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_insert_files() {
+    #[tokio::test]
+    async fn test_insert_files() {
         let mut fs = Dfs::default();
         let files = vec![PathBuf::from("/a"), PathBuf::from("/b")];
         assert_eq!(
-            fs.insert_files(files, Arc::default()),
+            fs.insert_files(files, Arc::default()).await,
             Vec::<PathBuf>::new()
         );
         assert_eq!(fs.fs.len(), 3);
@@ -279,7 +315,7 @@ mod tests {
         assert_eq!(fs.fs.contains_key(Path::new("/b")), true);
         let files2 = vec![PathBuf::from("a/b/c"), PathBuf::from("/a/c")];
         let delete = vec![PathBuf::from("a/b/c")];
-        assert_eq!(fs.insert_files(files2, Arc::default()), delete);
+        assert_eq!(fs.insert_files(files2, Arc::default()).await, delete);
     }
 
     #[test]
