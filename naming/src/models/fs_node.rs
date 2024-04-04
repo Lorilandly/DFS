@@ -12,8 +12,11 @@ use tokio::sync::Mutex;
 #[derive(Debug, Default)]
 pub struct FsNode {
     pub is_dir: bool,
+    /// When the node is a directory, children is a set of file names under the directory.
     pub children: RwLock<HashSet<String>>,
+    /// storages is a set of storage servers that the node is stored in.
     storages: Mutex<BTreeSet<Arc<Storage>>>,
+    /// access_count is the number of times the node is accessed (locked).
     pub access_count: AtomicI32,
 }
 
