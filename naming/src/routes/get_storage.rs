@@ -22,7 +22,7 @@ pub async fn get_storage(
     axum::Json(payload): axum::Json<GetStorageRequest>,
 ) -> Result<impl IntoResponse> {
     let dfs = dfs.read().await;
-    let storage = dfs.get_storage(&payload.path)?;
+    let storage = dfs.get_storage(&payload.path).await?;
     Ok(axum::Json(GetStorageResponse {
         server_ip: storage.storage_ip.clone(),
         server_port: storage.client_port,

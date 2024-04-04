@@ -22,6 +22,6 @@ pub async fn create_file(
     axum::Json(payload): axum::Json<CreateFileRequest>,
 ) -> Result<impl IntoResponse> {
     let mut dfs = dfs.write().await;
-    let success = dfs.insert(&payload.path, false)?;
+    let success = dfs.insert(&payload.path, false).await?;
     Ok(axum::Json(CreateFileResponse { success }))
 }

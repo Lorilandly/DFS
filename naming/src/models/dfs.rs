@@ -31,30 +31,42 @@ impl Default for Dfs {
 //   is deadlock on unlock that is not wrapped inside a tokio block_in_place
 //   block, the program will hang.
 impl Dfs {
-    pub fn insert(&mut self, path: &Path, is_dir: bool) -> Result<bool> {
+    fn random_storage(&self) -> Result<Arc<Storage>> {
+        // get a random storage from storages
+        match self
+            .storage
+            .iter()
+            .skip(rand::random::<usize>() % self.storage.len())
+            .next()
+        {
+            Some(storage) => Ok(storage.clone()),
+            None => Err((
+                StatusCode::NOT_FOUND,
+                Json(ExceptionReturn::new(
+                    "NotFoundException",
+                    "No storage available",
+                )),
+            )),
+        }
+    }
+
+    pub async fn insert(&mut self, path: &Path, is_dir: bool) -> Result<bool> {
         if let Some(_) = self.fs.get(path) {
             Ok(false)
         } else if let Some(parent) = path.parent() {
             match self.is_dir(parent)? {
                 true => {
-                    self.fs.insert(
-                        path.to_str().unwrap().into(),
-                        FsNode::new(is_dir, vec![], Arc::default()),
-                    );
+                    let storage = self.random_storage()?;
+                    self.fs
+                        .insert(path.into(), FsNode::new(is_dir, vec![], storage.clone()));
                     self.fs
                         .get(parent)
                         .unwrap()
                         .children
                         .write()
                         .push(path.file_name().unwrap().to_str().unwrap().to_string());
-                    if let Ok(false) = self.is_dir(path) {
-                        let client = reqwest::blocking::Client::new();
-                        let command_port = self.storage.first().unwrap().command_port;
-                        let _res = client
-                            .post(format!("http://localhost:{}/storage_create", command_port))
-                            .body(format!("{{\"path\": \"{}\"}}", path.to_str().unwrap()))
-                            .send()
-                            .unwrap();
+                    if !is_dir {
+                        let _ = crate::requests::storage_create(&storage, path).await;
                     }
                     Ok(true)
                 }
@@ -161,7 +173,7 @@ impl Dfs {
         }
     }
 
-    pub fn get_storage(&self, path: &Path) -> Result<Arc<Storage>> {
+    pub async fn get_storage(&self, path: &Path) -> Result<Arc<Storage>> {
         match self.is_dir(path)? {
             true => Err((
                 StatusCode::BAD_REQUEST,
@@ -170,7 +182,7 @@ impl Dfs {
                     "path is a directory.",
                 )),
             )),
-            false => Ok(self.fs.get(path).unwrap().storage.clone()),
+            false => Ok(self.fs.get(path).unwrap().get_storage().await.unwrap()),
         }
     }
 
@@ -179,6 +191,18 @@ impl Dfs {
         if let Some(node) = self.fs.get(path) {
             tracing::info!("lock path: {:?}", path);
             let files_to_lock = Self::get_ancestors(path);
+            // if lock for many times, replicate
+            let count = node
+                .access_count
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if !node.is_dir {
+                if exclusive {
+                    node.dereplicate_storage(path).await;
+                } else if count % 5 == 0 {
+                    // replicate
+                    node.replicate_storage(&self.storage, path).await;
+                }
+            }
             tokio::task::block_in_place(|| unsafe {
                 if exclusive {
                     node.children.raw().lock_exclusive();

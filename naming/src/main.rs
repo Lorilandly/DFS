@@ -1,6 +1,7 @@
 mod exception_return;
 mod logging;
 mod models;
+mod requests;
 mod routes;
 
 use axum::middleware;
