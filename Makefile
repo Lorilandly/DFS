@@ -36,7 +36,7 @@ clean:
 # generate documentation for the package of interest
 docs:
 	# javadoc -cp .:$(GSONFILE) -private -link $(DOCLINK) -d $(DOCDIR) $(PKGNAME)
-	cargo doc --no-deps
+	cargo doc --release --no-deps
 	
 # generate documentation for the test suite
 docs-test:

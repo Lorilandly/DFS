@@ -2,6 +2,13 @@
 
 This file details the contents of the initial Lab 3 code repository and how to use it.
 
+### Documentation
+
+Compile the document by running `make docs`. Document size is large, does not fit in GradeScope
+submission.
+
+Check `target/doc/` for all documentations including failure senarios and more.
+
 ### Getting started
 
 The codebase for this lab is independent of the previous labs.  If you used Java for the previous labs,

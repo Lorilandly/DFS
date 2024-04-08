@@ -10,7 +10,8 @@
 //! # Failure senarios
 //!
 //! 1. When making requests to the storage servers, the response content is not checked.
-//!    The storage servers may be down and the naming server will do nothing about it.
+//!    The naming server will proceed normally with error. If the storage servers is
+//!    down, the naming server will panic.
 //! 2. When unlocking a file, naming server does not check if the file is previously locked.
 //!    The result of doing so is undefined.
 //! 3. The selection of storage servers is only partially random, so the files are not
