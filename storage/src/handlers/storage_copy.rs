@@ -1,3 +1,5 @@
+//! Copy a file from one storage server to local.
+
 use crate::storage::Storage;
 use axum::{
     extract::State,
@@ -7,6 +9,7 @@ use axum::{
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
+/// Represents the request payload for the storage copy operation.
 #[derive(Debug, serde::Deserialize)]
 pub struct StorageCopyRequest {
     path: PathBuf,
@@ -14,11 +17,14 @@ pub struct StorageCopyRequest {
     server_port: u16,
 }
 
+/// Represents the response payload for the storage copy operation.
 #[derive(Debug, serde::Serialize)]
 struct StorageCopyResponse {
+    /// Indicates whether file copy was successful.
     success: bool,
 }
 
+/// Handles the storage copy.
 pub async fn storage_copy(
     State(storage): State<Arc<Mutex<Storage>>>,
     axum::Json(payload): axum::Json<StorageCopyRequest>,

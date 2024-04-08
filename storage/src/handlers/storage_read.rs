@@ -1,3 +1,4 @@
+//! Read data from a file in the storage
 use crate::handlers::exception_return::ExceptionReturn;
 use crate::storage::Storage;
 use axum::{extract::State, response::IntoResponse, Json};
@@ -6,18 +7,25 @@ use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
+/// Represents the request payload for reading data from a file in the storage.
 #[derive(Deserialize, Debug, Serialize)]
 pub struct StorageReadRequest {
+    /// The path of the file to read.
     pub path: PathBuf,
+    /// The offset from which to start reading.
     pub offset: i64,
+    /// The length of data to read.
     pub length: i64,
 }
 
+/// Represents the response payload for reading data from a file in the storage.
 #[derive(Serialize, Debug, Deserialize)]
 pub struct StorageReadResponse {
+    /// The data read from the file.
     pub data: String,
 }
 
+/// Handler function for reading data from a file in the storage.
 pub async fn storage_read(
     State(storage): State<Arc<Mutex<Storage>>>,
     Json(payload): Json<StorageReadRequest>,

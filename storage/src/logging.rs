@@ -1,3 +1,4 @@
+//! Logging middleware for Axum.
 use axum::{
     body::{Body, Bytes},
     extract::Request,

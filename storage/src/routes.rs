@@ -1,9 +1,11 @@
+//! Routes for the storage service.
 use crate::handlers;
 use crate::storage::Storage;
 use axum::routing::{post, Router};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+/// a router with the storage service routes.
 pub(super) fn client_routes(storage: Arc<Mutex<Storage>>) -> Router {
     Router::new()
         .route("/storage_size", post(handlers::storage_size::storage_size))
@@ -15,6 +17,7 @@ pub(super) fn client_routes(storage: Arc<Mutex<Storage>>) -> Router {
         .with_state(storage)
 }
 
+///  a router with the storage service routes.
 pub(super) fn command_routes(storage: Arc<Mutex<Storage>>) -> Router {
     Router::new()
         .route(

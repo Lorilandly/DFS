@@ -1,3 +1,12 @@
+//! Storage service
+//!
+//! ## Overview
+//! The storage server is responsible for storing files and serving them to clients, handling file operations such as reading, writing, and deleting files, and it is also responsible for replicating files from other storage servers.
+//!
+//! The storage server registers with the naming server and deletes files that are not in the naming server.
+//!
+//! ## Failure Scenarios
+//! - During server initialization, if the storage server fails to register with the naming server, it will panic.
 mod handlers;
 mod logging;
 mod requests;

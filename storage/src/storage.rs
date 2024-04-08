@@ -1,3 +1,5 @@
+//! This module contains the implementation of the storage server.
+
 use crate::handlers::{exception_return::ExceptionReturn, storage_read::StorageReadRequest};
 use crate::requests::{get_file_size, read_file};
 use axum::{http::StatusCode, Json};
@@ -9,6 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The result type for the storage server
 type Result<T> = std::result::Result<T, (StatusCode, Json<ExceptionReturn>)>;
 
 /// Storage struct
@@ -17,26 +20,34 @@ pub struct Storage {
     root_storage_dir: String,
 }
 
+/// Represents the request payload for the storage register operation.
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct RegisterRequest {
+    /// The IP address of the storage server
     pub storage_ip: String,
+    /// The port number of the client server
     pub client_port: u16,
+    /// The port number of the command server
     pub command_port: u16,
+    /// The list of files in the storage server
     pub files: Vec<PathBuf>,
 }
 
+/// Represents the response payload for the storage register operation.
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct RegisterResponse {
+    /// The list of files to delete
     pub files: Vec<PathBuf>,
 }
 
+/// Storage implementation
 impl Storage {
     pub fn new(root: &Path) -> Self {
         Self {
             root_storage_dir: root.to_str().unwrap().to_string(),
         }
     }
-
+    /// Initialize the storage server by registering with the naming server and deleting files that are not in the naming server
     pub async fn initialize_storage(
         &self,
         client_port: u16,
@@ -72,6 +83,7 @@ impl Storage {
         Ok(())
     }
 
+    /// Remove a directory if it is empty and recursively remove its parent directories if they are empty
     pub fn remove_dir_recursive(&self, path: &Path) -> std::result::Result<(), std::io::Error> {
         if self.is_dir_empty(path)? {
             fs::remove_dir(path)?;
@@ -82,10 +94,12 @@ impl Storage {
         Ok(())
     }
 
+    /// Check if a directory is empty
     pub fn is_dir_empty(&self, path: &Path) -> std::result::Result<bool, std::io::Error> {
         Ok(fs::read_dir(path)?.next().is_none())
     }
 
+    /// Get all files in the storage directory recursively
     pub fn get_all_files_recursive(
         &self,
         path: &Path,
@@ -102,6 +116,7 @@ impl Storage {
         Ok(files)
     }
 
+    /// Get the full path of a file with the given path
     fn get_full_path(&self, path: &Path) -> Result<PathBuf> {
         match path.strip_prefix("/") {
             Ok(p) => Ok(Path::new(&self.root_storage_dir).join(p)),
@@ -115,6 +130,7 @@ impl Storage {
         }
     }
 
+    /// Get the size of a file with the given path
     pub fn get_file_size(&self, path: &Path) -> Result<u64> {
         let full_path = self.get_full_path(path)?;
         match fs::metadata(&full_path) {
@@ -141,6 +157,7 @@ impl Storage {
         }
     }
 
+    /// Find a file with the given path
     pub fn find_file(&self, path: &Path) -> Result<fs::File> {
         let full_path = self.get_full_path(path)?;
         match fs::metadata(&full_path) {
@@ -180,6 +197,7 @@ impl Storage {
         }
     }
 
+    /// Read data from a file with the given path, offset, and length
     pub fn read(&self, path: &Path, offset: u64, length: u64) -> Result<Vec<u8>> {
         let file = self.find_file(path)?;
         let mut buffer = vec![0; length as usize];
@@ -207,6 +225,7 @@ impl Storage {
         }
     }
 
+    /// Write data to a file with the given path, offset, and data
     pub fn write(&self, path: &Path, offset: i64, data: Vec<u8>) -> Result<()> {
         if offset < 0 {
             return Err((
@@ -233,6 +252,7 @@ impl Storage {
         }
     }
 
+    /// Create a file with the given path
     pub fn create_file(&self, path: &Path) -> Result<bool> {
         if path == Path::new("/") {
             return Err((
@@ -271,6 +291,7 @@ impl Storage {
         }
     }
 
+    /// Delete a file with the given path
     pub fn delete_file(&self, path: &Path) -> Result<bool> {
         if path == Path::new("/") {
             return Err((
@@ -319,6 +340,7 @@ impl Storage {
         }
     }
 
+    /// Copy a file from another storage server with the given path, server IP, and server port
     pub async fn copy(&self, path: &Path, server_ip: &str, server_port: u16) -> Result<bool> {
         if !Storage::is_valid_path(path) {
             return Err((
@@ -380,10 +402,12 @@ impl Storage {
         }
     }
 
+    /// Check if a path is valid
     pub fn is_valid_path(path: &Path) -> bool {
         path.is_absolute()
     }
 
+    /// Create a file with the given path if it does not exist, if it exists, delete it and create a new one
     pub fn create_file_ignore_exist(&self, path: &Path) -> Result<File> {
         let full_path = self.get_full_path(path)?;
         match fs::create_dir_all(full_path.parent().unwrap()) {

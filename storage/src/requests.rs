@@ -1,3 +1,4 @@
+//! This module contains functions that send requests to the storage service.
 use crate::handlers::{
     exception_return::ExceptionReturn,
     storage_read::{StorageReadRequest, StorageReadResponse},
@@ -7,6 +8,7 @@ use crate::handlers::{
 use reqwest::{self, Error};
 use std::path::PathBuf;
 
+/// Sends a request to the storage service to get the size of a file.
 pub async fn get_file_size(
     path: PathBuf,
     ip: String,
@@ -26,6 +28,7 @@ pub async fn get_file_size(
     }
 }
 
+/// Sends a request to the storage service to read a file.
 pub async fn read_file(
     payload: StorageReadRequest,
     ip: String,
