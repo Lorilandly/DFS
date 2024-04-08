@@ -1,17 +1,19 @@
 use crate::storage::Storage;
-use axum::{extract::State, response::IntoResponse, Json};
-use serde::Deserialize;
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
+use axum::{
+    extract::State,
+    response::{IntoResponse, Result},
+    Json,
 };
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::Mutex;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct StorageSizeRequest {
     pub path: PathBuf,
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, Debug, Deserialize)]
 pub struct StorageSizeResponse {
     pub size: u64,
 }
@@ -19,10 +21,9 @@ pub struct StorageSizeResponse {
 pub async fn storage_size(
     State(storage): State<Arc<Mutex<Storage>>>,
     Json(payload): Json<StorageSizeRequest>,
-) -> impl IntoResponse {
-    let storage = storage.lock().unwrap();
-    match storage.get_file_size(&payload.path) {
-        Ok(size) => Json(StorageSizeResponse { size }).into_response(),
-        Err(e) => e.into_response(),
-    }
+) -> Result<impl IntoResponse> {
+    let storage = storage.lock().await;
+    let size = storage.get_file_size(&payload.path)?;
+
+    Ok(Json(StorageSizeResponse { size }))
 }

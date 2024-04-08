@@ -1,7 +1,8 @@
 use crate::handlers;
 use crate::storage::Storage;
 use axum::routing::{post, Router};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub(super) fn client_routes(storage: Arc<Mutex<Storage>>) -> Router {
     Router::new()
@@ -24,6 +25,6 @@ pub(super) fn command_routes(storage: Arc<Mutex<Storage>>) -> Router {
             "/storage_delete",
             post(handlers::storage_delete::storage_delete),
         )
-        .route("/storage_copy", post(|| async { "Hello, World!" }))
+        .route("/storage_copy", post(handlers::storage_copy::storage_copy))
         .with_state(storage)
 }

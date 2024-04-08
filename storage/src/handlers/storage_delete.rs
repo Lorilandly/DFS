@@ -1,7 +1,10 @@
 use crate::storage::Storage;
-use axum::{extract::State, response::IntoResponse};
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Result},
+};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::Mutex;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StorageDeleteRequest {
@@ -9,17 +12,15 @@ pub struct StorageDeleteRequest {
 }
 
 #[derive(Debug, serde::Serialize)]
-pub struct StorageDeleteResponse {
+struct StorageDeleteResponse {
     success: bool,
 }
 
 pub async fn storage_delete(
     State(storage): State<Arc<Mutex<Storage>>>,
     axum::Json(payload): axum::Json<StorageDeleteRequest>,
-) -> impl IntoResponse {
-    let storage = storage.lock().unwrap();
-    match storage.delete_file(&payload.path) {
-        Ok(res) => axum::Json(StorageDeleteResponse { success: res }).into_response(),
-        Err(e) => e.into_response(),
-    }
+) -> Result<impl IntoResponse> {
+    let storage = storage.lock().await;
+    let success = storage.delete_file(&payload.path)?;
+    Ok(axum::Json(StorageDeleteResponse { success }))
 }

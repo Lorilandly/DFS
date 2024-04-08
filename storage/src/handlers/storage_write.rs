@@ -1,11 +1,9 @@
 use crate::{handlers::exception_return::ExceptionReturn, storage::Storage};
+use axum::response::Result;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::Deserialize;
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
-
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::Mutex;
 #[derive(Deserialize, Debug)]
 pub struct StorageWriteRequest {
     pub path: PathBuf,
@@ -24,24 +22,16 @@ mod base64 {
 }
 
 #[derive(serde::Serialize)]
-pub struct StorageWriteResponse {
+struct StorageWriteResponse {
     pub success: bool,
 }
 
 pub async fn storage_write(
     State(storage): State<Arc<Mutex<Storage>>>,
     Json(payload): Json<StorageWriteRequest>,
-) -> impl IntoResponse {
-    if payload.offset < 0 {
-        return Json(ExceptionReturn::new(
-            "IndexOutOfBoundsException",
-            "Offset or length cannot be negative",
-        ))
-        .into_response();
-    }
-    let storage = storage.lock().unwrap();
-    match storage.write(&payload.path, payload.offset as u64, payload.data) {
-        Ok(_) => Json(StorageWriteResponse { success: true }).into_response(),
-        Err(e) => e.into_response(),
-    }
+) -> Result<impl IntoResponse> {
+    let storage = storage.lock().await;
+    storage.write(&payload.path, payload.offset, payload.data)?;
+
+    Ok(Json(StorageWriteResponse { success: true }))
 }

@@ -2,20 +2,18 @@ use crate::handlers::exception_return::ExceptionReturn;
 use crate::storage::Storage;
 use axum::{extract::State, response::IntoResponse, Json};
 use base64::prelude::*;
-use serde::Deserialize;
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::Mutex;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct StorageReadRequest {
     pub path: PathBuf,
     pub offset: i64,
     pub length: i64,
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct StorageReadResponse {
     pub data: String,
 }
@@ -31,7 +29,7 @@ pub async fn storage_read(
         ))
         .into_response();
     }
-    let storage = storage.lock().unwrap();
+    let storage = storage.lock().await;
     match storage.read(&payload.path, payload.offset as u64, payload.length as u64) {
         Ok(data) => Json(StorageReadResponse {
             data: BASE64_STANDARD.encode(data),
