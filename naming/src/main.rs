@@ -1,3 +1,24 @@
+//! The naming service is responsible for storing the locations of the other services in the system.
+//!
+//! # Naming server
+//!
+//! You can run the naming server by running the following command:
+//! ```bash
+//! cargo run --bin naming <service_port> <registration_port>
+//! ```
+//!
+//! # Failure senarios
+//!
+//! 1. When making requests to the storage servers, the response content is not checked.
+//!    The storage servers may be down and the naming server will do nothing about it.
+//! 2. When unlocking a file, naming server does not check if the file is previously locked.
+//!    The result of doing so is undefined.
+//! 3. The selection of storage servers is only partially random, so the files are not
+//!    going to be distributed evenly across.
+//! 4. When handling requests that involve modifying the fs tree, the entire storage is
+//!    locked exclusively for the entire process. The storage should only be locked for the
+//!    one command that perform the update.
+
 mod exception_return;
 mod logging;
 mod models;

@@ -1,3 +1,4 @@
+//! Top level shared state.
 use super::{fs_node::FsNode, storage::Storage};
 use crate::exception_return::ExceptionReturn;
 use axum::{http::StatusCode, Json};

@@ -1,3 +1,4 @@
+//! Routes for the naming service.
 mod create_directory;
 mod create_file;
 mod delete;
@@ -14,6 +15,7 @@ use axum::routing::{post, Router};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Routes facing the service port.
 pub(super) fn service_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
     Router::new()
         .route("/is_valid_path", post(is_valid_path::is_valid_path))
@@ -28,6 +30,7 @@ pub(super) fn service_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
         .with_state(dfs)
 }
 
+/// Routes facing the registration port.
 pub(super) fn registration_routes(dfs: Arc<RwLock<Dfs>>) -> Router {
     Router::new()
         .route("/register", post(register::register))

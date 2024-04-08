@@ -1,3 +1,4 @@
+//! Logging Module.
 use axum::{
     body::{Body, Bytes},
     extract::Request,

@@ -1,3 +1,4 @@
+//! File system node model
 use super::storage::Storage;
 use crate::requests;
 use futures::future::join_all;

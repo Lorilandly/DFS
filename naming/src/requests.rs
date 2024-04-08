@@ -1,3 +1,4 @@
+//! Requests to the storage servers.
 use crate::{exception_return::ExceptionReturn, models::storage::Storage};
 use axum::{http::StatusCode, Json};
 use reqwest;
@@ -5,6 +6,7 @@ use std::path::Path;
 
 type Result<T> = std::result::Result<T, (StatusCode, Json<ExceptionReturn>)>;
 
+/// Create new file on storage server.
 pub async fn storage_create(storage: &Storage, path: &Path) -> Result<bool> {
     let client = reqwest::Client::new();
     let _res = client
@@ -19,6 +21,7 @@ pub async fn storage_create(storage: &Storage, path: &Path) -> Result<bool> {
     Ok(true) // todo: use the response from the storage server
 }
 
+/// Delete file on storage server.
 pub async fn storage_delete(storage: &Storage, path: &Path) -> Result<bool> {
     let client = reqwest::Client::new();
     let _res = client
@@ -33,6 +36,7 @@ pub async fn storage_delete(storage: &Storage, path: &Path) -> Result<bool> {
     Ok(true) // todo: use the response from the storage server
 }
 
+/// Tell storage server to copy file from another storage server.
 pub async fn storage_copy(target: &Storage, source: &Storage, path: &Path) -> Result<bool> {
     let client = reqwest::Client::new();
     let _res = client
