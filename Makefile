@@ -35,8 +35,10 @@ clean:
 
 # generate documentation for the package of interest
 docs:
-	# javadoc -cp .:$(GSONFILE) -private -link $(DOCLINK) -d $(DOCDIR) $(PKGNAME)
 	cargo doc --release --no-deps
+	rm -rf ./docs
+	echo "<meta http-equiv=\"refresh\" content=\"0; url=naming\">" > target/doc/index.html
+	cp -r target/doc ./docs
 	
 # generate documentation for the test suite
 docs-test:

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_file_size","read_file"]};

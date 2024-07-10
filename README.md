@@ -7,6 +7,10 @@ This file details the contents of the initial Lab 3 code repository and how to u
 Compile the document by running `make docs`. Document size is large, does not fit in GradeScope
 submission.
 
+Github link: https://github.com/cmu14736/s24-lab3-goat
+
+see https://piazza.com/class/lqzuwhbdbrq5b1/post/441
+
 Check `target/doc/` for all documentations including failure senarios and more.
 
 ### Getting started

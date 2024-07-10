@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["storage_copy"],"struct":["StorageCopyRequest","StorageCopyResponse"]};

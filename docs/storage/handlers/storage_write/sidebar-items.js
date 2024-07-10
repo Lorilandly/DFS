@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["storage_write"],"mod":["base64"],"struct":["StorageWriteRequest","StorageWriteResponse"]};

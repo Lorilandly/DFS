@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["storage_create"],"struct":["StorageCreateRequest","StorageCreateResponse"]};

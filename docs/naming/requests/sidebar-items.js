@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["storage_copy","storage_create","storage_delete"],"type":["Result"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["storage_read"],"struct":["StorageReadRequest","StorageReadResponse"]};
